@@ -79,9 +79,24 @@ sistema (fluxo HTTP com `tests/helpers/buildTestApp.js`).
 4. Em **Project Settings → API**, copie `Project URL` e a chave para as variáveis
    `SUPABASE_URL` e `SUPABASE_KEY`.
 
-> **Bônus "banco como código":** versionar as mudanças com a Supabase CLI
-> (`supabase init`, `supabase link`, `supabase db push`) e aplicar via pipeline.
-> O `schema.sql` já pode virar a primeira migration.
+### Bônus "banco como código" (migrations versionadas)
+
+O esquema também está versionado como migration em `supabase/migrations/`. Para
+aplicar no projeto remoto via CLI (sem cliques no painel):
+
+```bash
+npx supabase login
+npx supabase link --project-ref vdzgwtdwpcqadqxxmtxi
+npx supabase db push
+```
+
+- `login` abre o navegador para gerar um token de acesso (fica na sua máquina).
+- `link` conecta ao projeto remoto (pode pedir a **senha do banco** — a mesma
+  definida ao criar o projeto; **não** a coloque no Git).
+- `db push` aplica as migrations de `supabase/migrations/` ao Supabase remoto.
+
+Novas mudanças de esquema: crie um novo arquivo em `supabase/migrations/` (ex.:
+`npx supabase migration new nome_da_mudanca`) e rode `db push` de novo.
 
 ## 5. Deploy da aplicação (Vercel)
 

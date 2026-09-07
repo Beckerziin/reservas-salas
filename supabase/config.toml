@@ -1,0 +1,4 @@
+# Configuracao da Supabase CLI.
+# project_id referencia o projeto remoto (usado por: supabase link / db push).
+# Este valor NAO e segredo (aparece na URL publica do projeto).
+project_id = "vdzgwtdwpcqadqxxmtxi"

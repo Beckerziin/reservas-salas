@@ -1,0 +1,26 @@
+# Ambiente de desenvolvimento reproduzivel (criterio de entrega final do PDF).
+# Sobe a API em container. Por padrao usa DATA_SOURCE=memory (sem banco local).
+# Para usar o Supabase real, defina as variaveis no arquivo .env.
+#
+#   docker compose up --build
+#
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATA_SOURCE: ${DATA_SOURCE:-memory}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-nao-use-em-producao}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_KEY: ${SUPABASE_KEY:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      SEED_DEV: ${SEED_DEV:-true}
+    # Para desenvolvimento com hot-reload, descomente os volumes e troque o
+    # command para "npm run dev" (requer nodemon nas devDependencies).
+    # volumes:
+    #   - ./src:/app/src
+    # command: npm run dev

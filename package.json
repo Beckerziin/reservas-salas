@@ -1,0 +1,42 @@
+{
+  "name": "reservas-salas-api",
+  "version": "1.0.0",
+  "description": "Backend (Node.js + Express) do Sistema de Reservas de Salas de Estudo - Projeto Integrador DevOps (FAG). API REST com persistencia em memoria (dev/test) ou Supabase (producao).",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage --runInBand",
+    "lint": "eslint ."
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "express",
+    "api",
+    "rest",
+    "supabase",
+    "jwt",
+    "reservas"
+  ],
+  "author": "Joao Becker (Backend)",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.4",
+    "supertest": "^7.0.0"
+  }
+}

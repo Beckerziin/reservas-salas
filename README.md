@@ -6,7 +6,7 @@ autenticação **JWT** e pronto para deploy na **Vercel**.
 
 > Papel: **Backend — João Becker**. Este repositório entrega a API pronta para o
 > **QA (Ian)** escrever os testes e ligar a **CI**, e para o **Frontend (Jorge)**
-> consumir a API. Ver [documento de requisitos](docs/RASTREABILIDADE.md) para a
+> consumir a API. Ver [rastreabilidade](docs/qualidade/rastreabilidade.md) para a
 > rastreabilidade dos requisitos.
 
 ## Sumário rápido
@@ -83,8 +83,14 @@ src/
 db/
   schema.sql            # tabelas do Supabase
   seed.sql              # salas de exemplo
-tests/                  # smoke + exemplo de unidade + helpers (QA amplia aqui)
-docs/                   # referência da API e rastreabilidade
+tests/
+  unit/                 # regras puras de src/domain (RN01..RN05)
+  integration/          # API + service + repositório em memória
+  system/               # fluxo HTTP completo (Supertest)
+  helpers/              # buildTestApp.js e utilitários compartilhados
+docs/
+  API.md                # referência da API
+  qualidade/            # rastreabilidade, estratégia de testes, roteiro de UX
 ```
 
 Arquitetura em camadas: **routes → controllers → services → repositories**, com as
@@ -106,21 +112,29 @@ Referência completa em [`docs/API.md`](docs/API.md).
 | PATCH | `/api/reservas/:id/cancelar` | JWT | RF07 cancelar (RN03,RN04) |
 | GET | `/api/health` | — | health check (CI) |
 
-## Testes
+## Como rodar os testes
 
 ```bash
-npm test              # roda tudo (modo memória, sem banco)
-npm run test:coverage # com cobertura
+npm test               # roda tudo (unidade + integração + sistema), modo memória, sem banco
+npm run test:unit       # só regras de negócio puras (src/domain)
+npm run test:integration # só API + service + repositório em memória
+npm run test:system     # só fluxo HTTP completo (equivalente a "E2E" sem navegador)
+npm run test:coverage   # roda tudo com relatório de cobertura (coverage/lcov-report/index.html)
 ```
 
-Os três níveis previstos no projeto (o **QA** amplia a partir de
-[`docs/RASTREABILIDADE.md`](docs/RASTREABILIDADE.md)):
+Os três níveis previstos no projeto (ver rastreabilidade completa em
+[`docs/qualidade/rastreabilidade.md`](docs/qualidade/rastreabilidade.md)):
 
-- **Unidade** — regras puras em `src/domain/reservaRules.js`
-  (ver exemplo em `tests/exemplo-unidade.reservaRules.test.js`).
-- **Integração** — service + repositório (memória) e API + repositório.
-- **Sistema** — fluxo HTTP completo via Supertest
-  (helpers prontos em `tests/helpers/buildTestApp.js`).
+- **Unidade** (`tests/unit`) — regras puras em `src/domain/reservaRules.js` e
+  `src/domain/validacoes.js`, sem HTTP e sem banco.
+- **Integração** (`tests/integration`) — API + service + repositório em memória
+  (implementação real da mesma interface do Supabase, não um mock — ver
+  [`docs/qualidade/estrategia-de-testes.md`](docs/qualidade/estrategia-de-testes.md)
+  para o porquê). Cada teste verifica o estado final no repositório, não só o
+  status HTTP.
+- **Sistema** (`tests/system`) — fluxo HTTP completo via Supertest, usando
+  `tests/helpers/buildTestApp.js`. Testes de navegador (Playwright) ficam
+  pendentes até o Frontend existir.
 
 ## Docker (ambiente reproduzível)
 

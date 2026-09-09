@@ -8,7 +8,7 @@
  * Cobre: RN01 (antecedencia), RN05 (duracao), RN02 (sobreposicao),
  *        RN03/RN04 (cancelamento).
  */
-const rules = require('../src/domain/reservaRules');
+const rules = require('../../src/domain/reservaRules');
 
 const MIN = 60 * 1000;
 const HORA = 60 * MIN;

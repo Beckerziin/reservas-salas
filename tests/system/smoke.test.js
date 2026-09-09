@@ -4,10 +4,10 @@
  * Smoke test - garante que a aplicacao sobe e responde.
  * Serve para o pipeline de CI ter algo verde desde o inicio.
  * O QA (Ian) deve adicionar os testes de unidade, integracao e sistema
- * a partir da tabela de rastreabilidade (docs/RASTREABILIDADE.md).
+ * a partir da tabela de rastreabilidade (docs/qualidade/rastreabilidade.md).
  */
 const request = require('supertest');
-const { buildTestApp } = require('./helpers/buildTestApp');
+const { buildTestApp } = require('../helpers/buildTestApp');
 
 describe('Smoke', () => {
   const { app } = buildTestApp();

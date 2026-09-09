@@ -67,9 +67,10 @@ jobs:
 > do Supabase. Depois do primeiro run, marque o check `test` como *required* na
 > proteção da branch (passo 2).
 
-Níveis de teste a cobrir (ver [`docs/RASTREABILIDADE.md`](RASTREABILIDADE.md)):
-unidade (regras puras), integração (service + repositório / API + repositório) e
-sistema (fluxo HTTP com `tests/helpers/buildTestApp.js`).
+Níveis de teste a cobrir (ver [`docs/qualidade/rastreabilidade.md`](qualidade/rastreabilidade.md)):
+unidade (`tests/unit`), integração (`tests/integration`, service + repositório /
+API + repositório) e sistema (`tests/system`, fluxo HTTP com
+`tests/helpers/buildTestApp.js`).
 
 ## 4. Deploy do banco (Supabase)
 

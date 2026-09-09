@@ -14,5 +14,20 @@ module.exports = {
     '!src/config/supabaseClient.js',
     '!src/repositories/supabase/**',
   ],
+  // Cobertura minima exigida (docs/qualidade/estrategia-de-testes.md):
+  // 100% nas regras de negocio puras (src/domain), 70% global. O CI falha
+  // se qualquer PR derrubar a cobertura abaixo disso.
+  coverageThreshold: {
+    global: {
+      statements: 70,
+      lines: 70,
+      functions: 70,
+    },
+    './src/domain/**/*.js': {
+      statements: 100,
+      lines: 100,
+      functions: 100,
+    },
+  },
   clearMocks: true,
 };

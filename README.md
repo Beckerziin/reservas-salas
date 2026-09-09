@@ -122,6 +122,10 @@ npm run test:system     # só fluxo HTTP completo (equivalente a "E2E" sem naveg
 npm run test:coverage   # roda tudo com relatório de cobertura (coverage/lcov-report/index.html)
 ```
 
+Cobertura mínima exigida (`jest.config.js` → `coverageThreshold`, falha o `npm run
+test:coverage` e o CI se cair abaixo disso): **100%** em `src/domain` (regras de
+negócio) e **70%** global (statements/lines/functions).
+
 Os três níveis previstos no projeto (ver rastreabilidade completa em
 [`docs/qualidade/rastreabilidade.md`](docs/qualidade/rastreabilidade.md)):
 
@@ -152,11 +156,26 @@ docker compose up --build      # sobe a API em container (modo memória por padr
 
 Passo a passo detalhado em [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+## Fluxo de trabalho (Git + CI)
+
+```
+issue/tarefa → branch (feat/fix/test/docs/chore) → commits
+            → Pull Request → CI roda lint + testes (falha reprova o PR)
+            → 1 aprovação → merge → main
+```
+
+`main` é protegida: sem push direto, PR obrigatório, 1 aprovação e o check da
+CI obrigatório antes do merge (ver seção 2 de [`CONTRIBUTING.md`](CONTRIBUTING.md)
+para o passo a passo de configuração no GitHub).
+
 ## Para o próximo colaborador
 
-- **QA (Ian):** o framework de testes já está configurado e `npm test` passa. Falta
-  **escrever os testes** dos 3 níveis e **inserir o workflow de CI** em
-  `.github/workflows/`. Ver a seção "CI" em [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- **QA (Ian):** os 3 níveis de teste e o workflow de CI
+  (`.github/workflows/ci.yml`) já estão no repositório e passam localmente.
+  Pendências conhecidas: aplicar a proteção da branch `main` no GitHub (exige
+  admin do repositório), finalizar `docs/qualidade/roteiro-cliente-real.md`
+  com um teste real fora do grupo, e (quando o Frontend existir) somar E2E de
+  navegador com Playwright aos testes de sistema atuais (HTTP via Supertest).
 - **Frontend (Jorge):** consuma a API acima. Em dev, rode `npm run dev` com
   `DATA_SOURCE=memory` e `SEED_DEV=true` para ter salas e usuários de exemplo
   (admin@fag.local / admin123).

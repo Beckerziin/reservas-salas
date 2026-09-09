@@ -1,6 +1,7 @@
 'use strict';
 
 const request = require('supertest');
+const bcrypt = require('bcryptjs');
 const { createApp } = require('../../src/app');
 const { criarRepositoriosMemoria } = require('../../src/repositories');
 
@@ -61,4 +62,39 @@ function daquiAMinutos(minutos) {
   return new Date(Date.now() + minutos * 60 * 1000).toISOString();
 }
 
-module.exports = { buildTestApp, criarSala, registrarELogar, daquiAMinutos };
+/**
+ * Cria um usuario com papel "admin" direto no repositorio (nao ha rota
+ * publica para se autopromover a admin - RF08 exige isso) e faz login pela
+ * API de verdade para obter o token. Util para testar RF08/403 nao-admin.
+ *
+ * @returns {Promise<{ token:string, usuario:object, credenciais:object }>}
+ */
+async function registrarAdminELogar(app, repositorios, dados = {}) {
+  const credenciais = {
+    nome: 'Admin Teste',
+    email: `admin_${Date.now()}_${Math.random().toString(16).slice(2)}@exemplo.com`,
+    senha: 'senha123',
+    ...dados,
+  };
+  const senhaHash = await bcrypt.hash(credenciais.senha, 4);
+  await repositorios.usuarios.create({
+    nome: credenciais.nome,
+    email: credenciais.email,
+    senhaHash,
+    papel: 'admin',
+  });
+
+  const res = await request(app)
+    .post('/api/auth/login')
+    .send({ email: credenciais.email, senha: credenciais.senha });
+
+  return { token: res.body.token, usuario: res.body.usuario, credenciais };
+}
+
+module.exports = {
+  buildTestApp,
+  criarSala,
+  registrarELogar,
+  registrarAdminELogar,
+  daquiAMinutos,
+};

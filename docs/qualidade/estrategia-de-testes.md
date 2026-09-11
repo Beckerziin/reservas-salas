@@ -10,13 +10,35 @@
   válidas/inválidas de status (RN03/RN04, cancelamento).
 - `tests/integration` — API + service + repositório em memória, verificando
   **estado final no repositório**, não só o status HTTP.
-- `tests/system` — fluxo HTTP completo (Supertest), equivalente ao "E2E" do
-  documento de requisitos. Testes de navegador (Playwright) ficam pendentes
-  até o Frontend existir — ver a seção de lacunas em `rastreabilidade.md`.
+- `tests/system` — fluxo HTTP completo (Supertest), sem navegador.
+- `tests/e2e` — Playwright/Chromium contra a aplicação real: backend Express
+  (memória + seed) e frontend React/Vite (dev server) sobem juntos via
+  `playwright.config.js` (`webServer`), o navegador conversa com o front pelo
+  proxy `/api` (igual em produção). Cobre os 3 fluxos principais escolhidos
+  (ver seção seguinte) — poucos e não-frágeis, seletores por `getByRole`/
+  `getByLabel` (o front não tem `data-testid`, mas usa `<label>`/`<button>`
+  semânticos, então não precisou pedir mudança ao Frontend).
 
 Convenção de nomenclatura: todo `describe` cita o identificador do requisito
 (`RNxx — <regra>` em unidade, `RFxx — <ação>` em integração, `HUxx — <fluxo>`
-em sistema), para a rastreabilidade ser verificável e não só declarada.
+em sistema/E2E), para a rastreabilidade ser verificável e não só declarada.
+
+## Os 3 fluxos E2E escolhidos (e por quê só 3)
+
+"Três E2E bem escolhidos valem mais que quinze frágeis": cada um dos 3 specs
+usa um dia distinto (amanhã / +2 / +3 dias) porque compartilham o mesmo
+processo de backend em memória dentro de uma mesma execução — sem isso,
+reservas de specs diferentes na mesma sala/horário dariam falso-conflito
+(RN02). A suíte roda com `workers: 1` por segurança.
+
+1. `fluxo-criar-reserva.spec.js` — caminho feliz: cadastro → escolhe sala →
+   define data/horário → confirma → mensagem de sucesso → reserva aparece em
+   "Minhas reservas" (HU03 + HU04).
+2. `fluxo-erro-conflito-horario.spec.js` — caminho de erro: reserva um
+   horário já ocupado na mesma sala → mensagem de erro clara → tela e dados
+   digitados preservados (RN02).
+3. `fluxo-cancelar-reserva.spec.js` — cancelamento: localiza a própria
+   reserva, cancela, vê o status mudar na tela (HU05).
 
 ## Por que os testes de integração/sistema não batem no Supabase real
 
@@ -54,32 +76,46 @@ CI (`.github/workflows/ci.yml`), não apenas no relatório.
 
 `.github/workflows/ci.yml` roda em todo push/PR para `main`:
 
-- job `lint` — `npm run lint` (ESLint);
+- job `lint` — `npm run lint` (ESLint na raiz; `frontend/` fica de fora via
+  `.eslintignore` porque tem seu próprio linter, `oxlint` — o ESLint do
+  backend, em CommonJS, não entende o ESM/JSX do front);
 - job `test` — matrix Node 18/20, `npm run test:coverage` com
   `DATA_SOURCE=memory` (sem segredos), cobertura publicada como artifact
-  (`coverage-report`, gerado no run com Node 20).
+  (`coverage-report`, gerado no run com Node 20);
+- job `e2e` — Node 20 (Vite exige `^20.19` ou `>=22.12`, por isso não entra
+  na matrix 18/20 do job `test`), instala backend e frontend, `npx playwright
+  install --with-deps chromium`, `npm run test:e2e`, publica
+  `playwright-report/` como artifact.
 
-Ambos os jobs precisam terminar em verde para o PR ficar mergeable — nenhum
+Todos os jobs precisam terminar em verde para o PR ficar mergeable — nenhum
 step usa `continue-on-error` nem `|| true`.
 
 ## Proteção da branch `main`
 
-A configurar em **Settings → Branches → Branch protection rules** (ou
-*Rulesets*) para `main`, por alguém com permissão de admin no repositório
-(o QA não tem essa permissão neste repo — confirmado via API em 2026-09-09):
+**Status atual: já existe uma Ruleset ativa** (`Settings → Rules → Rulesets`,
+"Deafault Ruleset", criada em 2026-09-09 pelo dono do repo) cobrindo a
+`main` (`~DEFAULT_BRANCH`), confirmada via API em 2026-09-10:
 
-1. Require a pull request before merging
-2. Require approvals: **1**
-3. Require status checks to pass before merging → selecionar os checks
-   `Lint` e `Testes (Node 18)` / `Testes (Node 20)` (nomes dos jobs de
-   `ci.yml`) — só aparecem na lista depois que o workflow rodar pelo menos
-   uma vez em um PR
-4. Require branches to be up to date before merging
-5. Block force pushes
-6. Require conversation resolution before merging
+- bloqueia deleção da branch e force-push (`non_fast_forward`) — **funciona**
+  (validado: PRs #3/#4 só entraram via merge normal, nenhum push direto foi
+  tentado, e a regra recusaria);
+- exige PR + **1 aprovação**, com resolução de conversas obrigatória — **sem
+  bypass para ninguém** (`current_user_can_bypass: never`, nem admin escapa),
+  confirmado na prática: o próprio QA não conseguiu mergear PR próprio sem
+  aprovação de outro colaborador (PR #3, 2026-09-10);
+- exige status checks `test` e `CI` antes de mergear.
 
-Depois de aplicar: validar tentando `git push` direto na `main` (deve ser
-recusado) e guardar um print como evidência para a apresentação.
+**Bug encontrado (pendente, precisa de admin para corrigir):** os nomes de
+check exigidos (`test`, `CI`) **não existem** — os jobs reais do
+`ci.yml` se chamam `Lint`, `Testes (Node 18)`, `Testes (Node 20)` e
+`E2E (Playwright)`. Isso não travou os merges feitos até aqui porque a régua
+antiga tolerou checks inexistentes, mas deixa a proteção de status check
+efetivamente **inativa** — um PR quebrado no CI ainda passaria pela Ruleset.
+Ação necessária (admin do repo, `Settings → Rules → Rulesets → Deafault
+Ruleset → Required status checks`): remover `test`/`CI` e adicionar `Lint`,
+`Testes (Node 18)`, `Testes (Node 20)` e `E2E (Playwright)` (só aparecem na
+lista depois de rodar pelo menos uma vez em um PR — já rodaram, ver PR #6).
 
-**Status atual: pendente de aplicação** (ver `rastreabilidade.md` /
-`README.md` → "Para o próximo colaborador").
+Evidência para a apresentação: prints da Ruleset (`gh api
+repos/Beckerziin/reservas-salas/rulesets/<id>`) e do merge de PR bloqueado
+por falta de aprovação (PR #3).

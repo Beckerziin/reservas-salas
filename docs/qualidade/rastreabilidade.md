@@ -35,6 +35,9 @@ teste → arquivo que prova aquilo**. Baseada no documento de requisitos (v1.0).
 | — | RF03 | listar salas (rota pública) | integração | `tests/integration/api-salas.test.js` |
 | — | — | health check / rota 404 padronizada | sistema | `tests/system/smoke.test.js` |
 | — | — | normalização/validação de datas (`paraData`) | unidade | `tests/unit/reserva-parsing-data.test.js` |
+| HU03 Reservar, HU04 Consultar | RF01, RF04-RF06 | RN01, RN02, RN05 | E2E (navegador) | `tests/e2e/fluxo-criar-reserva.spec.js` |
+| HU03 Reservar | RF04, RF05 | RN02 — horário já ocupado, erro sem perder o formulário | E2E (navegador) | `tests/e2e/fluxo-erro-conflito-horario.spec.js` |
+| HU05 Cancelar | RF07 | RN03/RN04 — cancelar e ver status mudar na tela | E2E (navegador) | `tests/e2e/fluxo-cancelar-reserva.spec.js` |
 
 Toda regra RN01-RN05 aparece em pelo menos um nível de teste (unidade +
 integração), conforme exigido.
@@ -44,5 +47,6 @@ integração), conforme exigido.
 | Lacuna | Por quê | Mitigação atual | Quando resolver |
 |--------|---------|------------------|------------------|
 | Integração/sistema não batem em um Supabase de teste real (usam a implementação `memory`, mesma interface do repositório) | Não há projeto Supabase de teste provisionado para o grupo; rodar CI sem segredos era prioridade (ver [`estrategia-de-testes.md`](./estrategia-de-testes.md)) | A interface `memory`/`supabase` é idêntica e testada; o risco fica restrito a comportamento específico do Postgres (constraints de schema, SQL, RLS) | Se o grupo provisionar um Supabase de teste, adicionar uma suíte extra (`tests/integration-supabase/` ou similar) contra ele, sem remover a suíte em memória |
-| Testes de "sistema" são HTTP (Supertest), não E2E de navegador (Playwright) | Não existe Frontend ainda neste repositório | Os fluxos completos (HU01-HU05) já são exercitados via HTTP, cobrindo a lógica de ponta a ponta do backend | Quando o Frontend (Jorge) existir, adicionar `tests/e2e/*.spec.ts` com Playwright cobrindo os mesmos fluxos pela UI |
+| ~~Testes de "sistema" são HTTP, não E2E de navegador~~ — **resolvido**: com o Frontend mergeado, `tests/e2e/` (Playwright/Chromium) cobre os 3 fluxos principais (criar, erro de conflito, cancelar) pela UI real | — | — | — |
+| E2E (Playwright) roda com `workers: 1` e datas fixas por spec (amanhã/+2/+3 dias) | Os specs compartilham o mesmo processo de backend em memória (`playwright.config.js` sobe um único servidor); rodar em paralelo ou reusar o mesmo dia entre specs causaria falso conflito de horário (RN02) | Cada spec usa um dia diferente; suíte roda em série | Se a suíte crescer muito, isolar por sala em vez de por dia permitiria paralelismo |
 | Sem teste dedicado de transição de status inválida (ex.: tentar reativar reserva `cancelada` diretamente) | Não há endpoint que permita essa transição hoje (só criar e cancelar) | N/A — superfície de ataque não existe no código atual | Reavaliar se o RF de edição/reagendamento de reserva for implementado |

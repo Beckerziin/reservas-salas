@@ -83,10 +83,12 @@ src/
 db/
   schema.sql            # tabelas do Supabase
   seed.sql              # salas de exemplo
+frontend/                # interface React + Vite (consome a API via proxy /api)
 tests/
   unit/                 # regras puras de src/domain (RN01..RN05)
   integration/          # API + service + repositório em memória
   system/               # fluxo HTTP completo (Supertest)
+  e2e/                  # Playwright/Chromium contra backend + frontend reais
   helpers/              # buildTestApp.js e utilitários compartilhados
 docs/
   API.md                # referência da API
@@ -118,15 +120,16 @@ Referência completa em [`docs/API.md`](docs/API.md).
 npm test               # roda tudo (unidade + integração + sistema), modo memória, sem banco
 npm run test:unit       # só regras de negócio puras (src/domain)
 npm run test:integration # só API + service + repositório em memória
-npm run test:system     # só fluxo HTTP completo (equivalente a "E2E" sem navegador)
+npm run test:system     # só fluxo HTTP completo (Supertest, sem navegador)
 npm run test:coverage   # roda tudo com relatório de cobertura (coverage/lcov-report/index.html)
+npm run test:e2e        # Playwright: sobe backend+frontend e roda no Chromium (instalar antes: npx playwright install --with-deps chromium)
 ```
 
 Cobertura mínima exigida (`jest.config.js` → `coverageThreshold`, falha o `npm run
 test:coverage` e o CI se cair abaixo disso): **100%** em `src/domain` (regras de
 negócio) e **70%** global (statements/lines/functions).
 
-Os três níveis previstos no projeto (ver rastreabilidade completa em
+Os quatro níveis previstos no projeto (ver rastreabilidade completa em
 [`docs/qualidade/rastreabilidade.md`](docs/qualidade/rastreabilidade.md)):
 
 - **Unidade** (`tests/unit`) — regras puras em `src/domain/reservaRules.js` e
@@ -137,8 +140,11 @@ Os três níveis previstos no projeto (ver rastreabilidade completa em
   para o porquê). Cada teste verifica o estado final no repositório, não só o
   status HTTP.
 - **Sistema** (`tests/system`) — fluxo HTTP completo via Supertest, usando
-  `tests/helpers/buildTestApp.js`. Testes de navegador (Playwright) ficam
-  pendentes até o Frontend existir.
+  `tests/helpers/buildTestApp.js`.
+- **E2E** (`tests/e2e`) — Playwright/Chromium contra a aplicação real
+  (backend + `frontend/`), 3 fluxos escolhidos: criar reserva, erro de
+  conflito de horário, cancelar. Ver `playwright.config.js` e
+  [`docs/qualidade/estrategia-de-testes.md`](docs/qualidade/estrategia-de-testes.md).
 
 ## Docker (ambiente reproduzível)
 
@@ -164,18 +170,22 @@ issue/tarefa → branch (feat/fix/test/docs/chore) → commits
             → 1 aprovação → merge → main
 ```
 
-`main` é protegida: sem push direto, PR obrigatório, 1 aprovação e o check da
-CI obrigatório antes do merge (ver seção 2 de [`CONTRIBUTING.md`](CONTRIBUTING.md)
-para o passo a passo de configuração no GitHub).
+`main` é protegida por uma Ruleset ativa (PR obrigatório, 1 aprovação sem
+bypass para ninguém, sem force-push/delete). **Pendência conhecida:** os
+nomes de status check exigidos pela Ruleset (`test`, `CI`) não batem com os
+jobs reais do `ci.yml` (`Lint`, `Testes (Node 18/20)`, `E2E (Playwright)`) —
+ver detalhe e correção necessária em
+[`docs/qualidade/estrategia-de-testes.md`](docs/qualidade/estrategia-de-testes.md#proteção-da-branch-main).
 
 ## Para o próximo colaborador
 
-- **QA (Ian):** os 3 níveis de teste e o workflow de CI
-  (`.github/workflows/ci.yml`) já estão no repositório e passam localmente.
-  Pendências conhecidas: aplicar a proteção da branch `main` no GitHub (exige
-  admin do repositório), finalizar `docs/qualidade/roteiro-cliente-real.md`
-  com um teste real fora do grupo, e (quando o Frontend existir) somar E2E de
-  navegador com Playwright aos testes de sistema atuais (HTTP via Supertest).
-- **Frontend (Jorge):** consuma a API acima. Em dev, rode `npm run dev` com
-  `DATA_SOURCE=memory` e `SEED_DEV=true` para ter salas e usuários de exemplo
-  (admin@fag.local / admin123).
+- **QA (Ian):** os 4 níveis de teste (unidade, integração, sistema, E2E) e o
+  CI (`.github/workflows/ci.yml`, incluindo o job `e2e`) estão no repositório
+  e passam localmente e no GitHub Actions. Pendências conhecidas: corrigir os
+  nomes dos status checks na Ruleset da `main` (exige admin do repositório —
+  ver seção acima) e rodar o teste com cliente real usando o roteiro em
+  `docs/qualidade/roteiro-cliente-real.md`.
+- **Frontend (Jorge):** já mergeado em `frontend/`. Em dev, rode `npm run dev`
+  na raiz com `DATA_SOURCE=memory` e `SEED_DEV=true`, e `npm run dev` dentro
+  de `frontend/` (Vite, porta 5173, proxy `/api` → `localhost:3000`). Usuários
+  de exemplo: `admin@fag.local` / `admin123` e `aluno@fag.local` / `aluno123`.

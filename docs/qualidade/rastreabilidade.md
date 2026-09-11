@@ -1,16 +1,7 @@
 # Tabela de Rastreabilidade
 
-Liga **história de usuário → requisito funcional → regra de negócio → teste**.
-Baseada no documento de requisitos (v1.0). Serve de guia para o QA escolher
-**o que** testar (evita "testar qualquer coisa").
-
-| História | Requisito | Regra | Onde vive no código | Teste sugerido |
-|----------|-----------|-------|---------------------|----------------|
-| HU01 Cadastro | RF01 | e-mail único/válido | `services/usuariosService.js` | Sistema: cadastro (201) + e-mail duplicado (409) |
-| HU02 Login | RF02 | credenciais válidas | `services/authService.js` | Integração: login válido/inválido (200/401) |
-| HU03 Reservar | RF04, RF05 | RN01, RN02, RN05 | `domain/reservaRules.js`, `services/reservasService.js` | Unidade: regras puras · Integração: criar reserva válida · Sistema: impedir conflito (409) |
-| HU04 Consultar | RF06 | — | `services/reservasService.js` | Sistema: listar só as reservas do próprio usuário |
-| HU05 Cancelar | RF07 | RN03, RN04 | `domain/reservaRules.js` (`podeCancelar`) | Unidade: validar regra de cancelamento · Sistema: cancelar libera horário |
+Liga **história de usuário → requisito funcional → regra de negócio → nível de
+teste → arquivo que prova aquilo**. Baseada no documento de requisitos (v1.0).
 
 ## Regras de negócio (implementação)
 
@@ -22,11 +13,36 @@ Baseada no documento de requisitos (v1.0). Serve de guia para o QA escolher
 | RN04 | reserva passada não cancela | `reservaRules.podeCancelar` (`RESERVA_PASSADA`) | `400 RESERVA_PASSADA` |
 | RN05 | duração máx. 2 h | `reservaRules.duracaoValida` | `400 DURACAO_INVALIDA` |
 
-## Sugestão de cobertura mínima (3 níveis)
+## HU → RF → RN → teste
 
-1. **Unidade** (`src/domain`): RN01, RN02, RN03/RN04, RN05 — já há um exemplo em
-   `tests/exemplo-unidade.reservaRules.test.js`.
-2. **Integração** (service + repositório em memória): criar reserva válida;
-   bloquear conflito; login válido/inválido.
-3. **Sistema** (HTTP com Supertest, via `tests/helpers/buildTestApp.js`): fluxo
-   cadastro → login → reservar → consultar → cancelar.
+| História | Requisito | Regra | Nível | Arquivo do teste |
+|----------|-----------|-------|-------|-------------------|
+| HU01 Cadastro | RF01 | validação de e-mail/campos obrigatórios | unidade | `tests/unit/validacoes.test.js` |
+| HU01 Cadastro | RF01 | e-mail único, cadastro válido | integração | `tests/integration/api-usuarios.test.js` |
+| HU01-HU04 Cadastro → login → reservar → consultar | RF01, RF02, RF04-RF06 | RN01, RN02, RN05 | sistema | `tests/system/fluxo-criar-reserva.test.js` |
+| HU02 Login | RF02 | credenciais válidas/inválidas, sessão (`/auth/me`) | integração | `tests/integration/api-auth.test.js` |
+| HU03 Reservar | RF04, RF05 | RN01 (antecedência) | unidade | `tests/unit/reserva-antecedencia.test.js` |
+| HU03 Reservar | RF04, RF05 | RN02 (conflito de horário) | unidade | `tests/unit/reserva-conflito.test.js` |
+| HU03 Reservar | RF04, RF05 | RN05 (duração máxima) | unidade | `tests/unit/reserva-duracao.test.js` |
+| HU03 Reservar | RF04, RF05 | RN01, RN02, RN05, parsing de datas | integração | `tests/integration/api-reservas.test.js` |
+| HU03 Reservar | RF04, RF05 | RN02 — tentar reservar horário ocupado | sistema | `tests/system/fluxo-erro-conflito-horario.test.js` |
+| HU04 Consultar | RF06 | listar só as reservas do próprio usuário | integração | `tests/integration/api-reservas.test.js` |
+| HU05 Cancelar | RF07 | RN03 (só o dono cancela) | unidade | `tests/unit/reserva-cancelamento.test.js` |
+| HU05 Cancelar | RF07 | RN04 (reserva passada não cancela) | unidade | `tests/unit/reserva-cancelamento.test.js` |
+| HU05 Cancelar | RF07 | RN03, RN04, libera horário após cancelar | integração | `tests/integration/api-reservas.test.js` |
+| HU05 Cancelar | RF07 | RN03 — cancelar e ver refletido na listagem | sistema | `tests/system/fluxo-cancelar-reserva.test.js` |
+| HU-admin Salas | RF08 | cadastro de sala restrito a admin | integração | `tests/integration/api-salas.test.js` |
+| — | RF03 | listar salas (rota pública) | integração | `tests/integration/api-salas.test.js` |
+| — | — | health check / rota 404 padronizada | sistema | `tests/system/smoke.test.js` |
+| — | — | normalização/validação de datas (`paraData`) | unidade | `tests/unit/reserva-parsing-data.test.js` |
+
+Toda regra RN01-RN05 aparece em pelo menos um nível de teste (unidade +
+integração), conforme exigido.
+
+## Lacunas conhecidas (não escondidas)
+
+| Lacuna | Por quê | Mitigação atual | Quando resolver |
+|--------|---------|------------------|------------------|
+| Integração/sistema não batem em um Supabase de teste real (usam a implementação `memory`, mesma interface do repositório) | Não há projeto Supabase de teste provisionado para o grupo; rodar CI sem segredos era prioridade (ver [`estrategia-de-testes.md`](./estrategia-de-testes.md)) | A interface `memory`/`supabase` é idêntica e testada; o risco fica restrito a comportamento específico do Postgres (constraints de schema, SQL, RLS) | Se o grupo provisionar um Supabase de teste, adicionar uma suíte extra (`tests/integration-supabase/` ou similar) contra ele, sem remover a suíte em memória |
+| Testes de "sistema" são HTTP (Supertest), não E2E de navegador (Playwright) | Não existe Frontend ainda neste repositório | Os fluxos completos (HU01-HU05) já são exercitados via HTTP, cobrindo a lógica de ponta a ponta do backend | Quando o Frontend (Jorge) existir, adicionar `tests/e2e/*.spec.ts` com Playwright cobrindo os mesmos fluxos pela UI |
+| Sem teste dedicado de transição de status inválida (ex.: tentar reativar reserva `cancelada` diretamente) | Não há endpoint que permita essa transição hoje (só criar e cancelar) | N/A — superfície de ataque não existe no código atual | Reavaliar se o RF de edição/reagendamento de reserva for implementado |

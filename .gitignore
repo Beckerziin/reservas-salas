@@ -16,6 +16,11 @@ yarn-error.log*
 # Cobertura de testes
 coverage/
 
+# Playwright (E2E)
+playwright-report/
+test-results/
+blob-report/
+
 # Build / Vercel
 .vercel/
 dist/

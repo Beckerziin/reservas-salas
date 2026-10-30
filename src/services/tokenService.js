@@ -10,12 +10,14 @@ function criarTokenService({ jwtSecret, jwtExpiresIn = '1d' }) {
   if (!jwtSecret) {
     throw new Error('tokenService: jwtSecret e obrigatorio');
   }
+  // Algoritmo fixo: impede ataques de troca de algoritmo (ex.: "alg": "none").
+  const ALGORITMO = 'HS256';
   return {
     assinar(payload) {
-      return jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn });
+      return jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn, algorithm: ALGORITMO });
     },
     verificar(token) {
-      return jwt.verify(token, jwtSecret);
+      return jwt.verify(token, jwtSecret, { algorithms: [ALGORITMO] });
     },
   };
 }

@@ -5,7 +5,8 @@ import './App.css'
 const today = new Date().toISOString().slice(0, 10)
 const initialReserva = { salaId: '', data: today, horaInicio: '14:00', horaFim: '15:00' }
 const initialLogin = { email: '', senha: '' }
-const initialCadastro = { nome: '', email: '', senha: '' }
+// "website" e o honeypot anti-bot: fica invisivel e deve ir vazio para a API.
+const initialCadastro = { nome: '', email: '', senha: '', website: '' }
 const initialSala = { nome: '', capacidade: 4, status: 'disponivel' }
 
 function Icon({ name }) {
@@ -176,6 +177,7 @@ function App() {
             <label>Nome completo<input autoComplete="name" onChange={(event) => setCadastroForm({ ...cadastroForm, nome: event.target.value })} required value={cadastroForm.nome} /></label>
             <label>E-mail<input autoComplete="email" onChange={(event) => setCadastroForm({ ...cadastroForm, email: event.target.value })} placeholder="voce@fag.edu.br" required type="email" value={cadastroForm.email} /></label>
             <label>Senha<input autoComplete="new-password" minLength="6" onChange={(event) => setCadastroForm({ ...cadastroForm, senha: event.target.value })} placeholder="Mínimo de 6 caracteres" required type="password" value={cadastroForm.senha} /></label>
+            <div aria-hidden="true" className="honeypot"><label>Website<input autoComplete="off" name="website" onChange={(event) => setCadastroForm({ ...cadastroForm, website: event.target.value })} tabIndex="-1" value={cadastroForm.website} /></label></div>
             <button className="primary-button" disabled={loading} type="submit">Criar conta <Icon name="arrowRight" /></button>
           </form>}
         </section>

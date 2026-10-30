@@ -3,9 +3,9 @@
 const { Router } = require('express');
 
 // RF01
-function criarUsuariosRoutes(controller) {
+function criarUsuariosRoutes(controller, antiBot = []) {
   const router = Router();
-  router.post('/', controller.cadastrar);
+  router.post('/', ...antiBot, controller.cadastrar);
   return router;
 }
 

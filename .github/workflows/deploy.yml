@@ -1,0 +1,96 @@
+name: Deploy
+
+# CD: todo merge na main que passar nos testes vai para producao na Vercel.
+# Segredos necessarios (Settings > Secrets and variables > Actions):
+#   VERCEL_TOKEN       - token pessoal (vercel.com/account/tokens)
+#   VERCEL_ORG_ID      - "orgId" de .vercel/project.json (apos `vercel link`)
+#   VERCEL_PROJECT_ID  - "projectId" de .vercel/project.json
+# As variaveis da aplicacao (DATA_SOURCE, SUPABASE_URL, SUPABASE_KEY,
+# JWT_SECRET, CORS_ORIGIN) continuam no painel da Vercel e sao baixadas pelo
+# `vercel pull`.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-producao
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  verificar:
+    name: Lint + testes + seguranca
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      DATA_SOURCE: memory
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes (unidade + integracao + sistema + seguranca)
+        run: npm run test:coverage
+
+      - name: Auditoria de dependencias
+        run: npm audit --omit=dev --audit-level=high
+
+  deploy:
+    name: Deploy na Vercel (producao)
+    needs: verificar
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Baixar configuracao do projeto
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Publicado em $url"
+
+      # Smoke test no dominio de producao (variavel PRODUCTION_URL do repo,
+      # ex.: https://reservas-salas.vercel.app). A URL unica do deploy pode
+      # estar atras da Deployment Protection da Vercel, por isso nao e usada.
+      - name: Verificar health check
+        if: vars.PRODUCTION_URL != ''
+        run: |
+          for tentativa in 1 2 3 4 5; do
+            if curl --fail --silent "${{ vars.PRODUCTION_URL }}/api/health"; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Health check falhou" && exit 1

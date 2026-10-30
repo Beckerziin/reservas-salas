@@ -8,6 +8,7 @@ const { criarRepositorios } = require('./repositories');
 const { criarRotas } = require('./routes');
 const { notFound } = require('./middlewares/notFound');
 const { errorHandler } = require('./middlewares/errorHandler');
+const { securityHeaders } = require('./middlewares/securityHeaders');
 
 /**
  * Cria a aplicacao Express SEM iniciar o servidor (sem listen).
@@ -23,13 +24,18 @@ function createApp({ repositorios, config } = {}) {
   const cfg = {
     jwtSecret: env.jwtSecret,
     jwtExpiresIn: env.jwtExpiresIn,
+    rateLimit: env.rateLimit,
+    trustProxy: env.trustProxy,
     ...config,
   };
 
   const app = express();
   app.disable('x-powered-by');
+  if (cfg.trustProxy) app.set('trust proxy', 1);
+  app.use(securityHeaders);
   app.use(cors({ origin: env.corsOrigin }));
-  app.use(express.json());
+  // Limite de corpo: payloads gigantes (bots / DoS) recebem 413.
+  app.use(express.json({ limit: '10kb' }));
 
   // Raiz informativa (util para checar o deploy no navegador).
   app.get('/', (_req, res) => {

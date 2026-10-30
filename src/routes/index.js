@@ -14,6 +14,8 @@ const { criarSalasController } = require('../controllers/salasController');
 const { criarReservasController } = require('../controllers/reservasController');
 
 const { criarAuthMiddleware, apenasAdmin } = require('../middlewares/auth');
+const { criarRateLimiter } = require('../middlewares/rateLimit');
+const { honeypot } = require('../middlewares/antiBot');
 
 const { criarUsuariosRoutes } = require('./usuarios.routes');
 const { criarAuthRoutes } = require('./auth.routes');
@@ -49,6 +51,21 @@ function criarRotas(repositorios, config) {
   // Middleware de autenticacao
   const autenticar = criarAuthMiddleware({ tokenService });
 
+  // Anti-bot: forca bruta no login (so tentativas que falham contam) e
+  // cadastro em massa.
+  const limites = config.rateLimit;
+  const limitarLogin = criarRateLimiter({
+    janelaMs: limites.loginJanelaMs,
+    max: limites.loginMax,
+    contarApenasFalhas: true,
+    mensagem: 'Muitas tentativas de login. Tente novamente mais tarde.',
+  });
+  const limitarCadastro = criarRateLimiter({
+    janelaMs: limites.cadastroJanelaMs,
+    max: limites.cadastroMax,
+    mensagem: 'Muitos cadastros a partir deste endereco. Tente novamente mais tarde.',
+  });
+
   // Router raiz da API
   const api = Router();
 
@@ -57,8 +74,8 @@ function criarRotas(repositorios, config) {
     res.status(200).json({ status: 'ok', dataSource: repositorios.tipo || 'desconhecido' });
   });
 
-  api.use('/usuarios', criarUsuariosRoutes(usuariosController));
-  api.use('/auth', criarAuthRoutes(authController, autenticar));
+  api.use('/usuarios', criarUsuariosRoutes(usuariosController, [limitarCadastro, honeypot]));
+  api.use('/auth', criarAuthRoutes(authController, autenticar, [limitarLogin]));
   api.use('/salas', criarSalasRoutes(salasController, autenticar, apenasAdmin));
   api.use('/reservas', criarReservasRoutes(reservasController, autenticar));
 

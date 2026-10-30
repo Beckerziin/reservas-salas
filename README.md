@@ -65,6 +65,9 @@ Ver [`.env.example`](.env.example). Resumo:
 | `SUPABASE_KEY` | sim se `supabase` | chave da API Supabase |
 | `CORS_ORIGIN` | não | origem do frontend (padrão `*`) |
 | `SEED_DEV` | não | popular dados de exemplo em memória |
+| `RATE_LIMIT_LOGIN_MAX` | não | logins errados por IP a cada 15 min (padrão 10) |
+| `RATE_LIMIT_CADASTRO_MAX` | não | cadastros por IP por hora (padrão 10) |
+| `TRUST_PROXY` | não | `true` só atrás de proxy confiável (automático na Vercel) |
 
 ## Estrutura do projeto
 
@@ -122,6 +125,7 @@ npm run test:unit       # só regras de negócio puras (src/domain)
 npm run test:integration # só API + service + repositório em memória
 npm run test:system     # só fluxo HTTP completo (Supertest, sem navegador)
 npm run test:coverage   # roda tudo com relatório de cobertura (coverage/lcov-report/index.html)
+npm run test:security   # seguranca: IDOR, criptografia/senhas, injecao, bots (ver docs/qualidade/testes-de-seguranca.md)
 npm run test:e2e        # Playwright: sobe backend+frontend e roda no Chromium (instalar antes: npx playwright install --with-deps chromium)
 ```
 
@@ -154,6 +158,9 @@ docker compose up --build      # sobe a API em container (modo memória por padr
 
 ## Deploy
 
+- **CI/CD:** `.github/workflows/deploy.yml` publica na Vercel a cada push na
+  `main` que passar em lint + testes + segurança. Configure os segredos
+  `VERCEL_TOKEN`, `VERCEL_ORG_ID` e `VERCEL_PROJECT_ID` no GitHub.
 - **Vercel:** o repositório já tem `api/index.js` + `vercel.json`. Basta importar o
   repositório na Vercel e definir as variáveis (`DATA_SOURCE=supabase`,
   `SUPABASE_URL`, `SUPABASE_KEY`, `JWT_SECRET`, `CORS_ORIGIN`).

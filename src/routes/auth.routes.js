@@ -3,9 +3,9 @@
 const { Router } = require('express');
 
 // RF02 + sessao
-function criarAuthRoutes(controller, autenticar) {
+function criarAuthRoutes(controller, autenticar, antiBot = []) {
   const router = Router();
-  router.post('/login', controller.login);
+  router.post('/login', ...antiBot, controller.login);
   router.get('/me', autenticar, controller.me);
   return router;
 }

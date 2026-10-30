@@ -1,7 +1,7 @@
 'use strict';
 
 const { ValidationError } = require('../domain/errors');
-const { textoPreenchido, STATUS_SALA } = require('../domain/validacoes');
+const { textoPreenchido, textoSemMarcacao, STATUS_SALA } = require('../domain/validacoes');
 
 /**
  * Service de salas. RF03 (listar) e RF08 (cadastrar - admin).
@@ -22,6 +22,9 @@ function criarSalasService({ salas }) {
     async cadastrar({ nome, capacidade, status = 'disponivel' }) {
       if (!textoPreenchido(nome)) {
         throw new ValidationError('Nome da sala e obrigatorio', 'NOME_OBRIGATORIO');
+      }
+      if (!textoSemMarcacao(nome)) {
+        throw new ValidationError('Nome da sala contem caracteres invalidos', 'NOME_INVALIDO');
       }
       const cap = Number(capacidade);
       if (!Number.isInteger(cap) || cap <= 0) {

@@ -57,6 +57,40 @@ jobs:
           path: coverage/
           retention-days: 7
 
+  security:
+    name: Testes de seguranca
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      DATA_SOURCE: memory
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # IDOR, criptografia/senhas, injecao de codigo e bots (tests/security).
+      - name: Rodar testes de seguranca
+        run: npm run test:security -- --ci --json --outputFile=security-report.json
+
+      # Dependencias de producao com vulnerabilidade alta/critica reprovam o PR.
+      - name: Auditoria de dependencias (npm audit)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Publicar relatorio de seguranca
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.json
+          retention-days: 7
+
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest

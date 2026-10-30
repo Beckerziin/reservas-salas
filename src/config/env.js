@@ -30,22 +30,48 @@ const env = {
 
   // Popular dados de exemplo em memoria (nunca durante testes)
   seedDev: process.env.SEED_DEV !== 'false' && !isTest,
+
+  // Atras de proxy (Vercel) o IP real do cliente vem no X-Forwarded-For.
+  // Fora de proxy fica desligado: senao o cliente forjaria o proprio IP e
+  // driblaria o rate limit.
+  trustProxy: process.env.TRUST_PROXY === 'true' || Boolean(process.env.VERCEL),
+
+  // Anti-bot / forca bruta (por IP)
+  rateLimit: {
+    loginMax: Number(process.env.RATE_LIMIT_LOGIN_MAX || 10),
+    loginJanelaMs: 15 * 60 * 1000,
+    cadastroMax: Number(process.env.RATE_LIMIT_CADASTRO_MAX || 10),
+    cadastroJanelaMs: 60 * 60 * 1000,
+  },
 };
+
+// Segredos de exemplo/dev publicados no repositorio: nunca validos em producao.
+const SEGREDOS_CONHECIDOS = ['troque-este-segredo-em-producao', 'dev-secret-nao-use-em-producao'];
+const SEGREDO_TAMANHO_RECOMENDADO = 32;
 
 /**
  * Valida a configuracao minima de acordo com o ambiente.
  * Chamado no boot do servidor (nao nos testes) para falhar cedo e claro.
  */
-function validarConfig() {
+function validarConfig(config = env) {
   const erros = [];
 
-  if (env.dataSource === 'supabase') {
-    if (!env.supabaseUrl) erros.push('SUPABASE_URL e obrigatorio quando DATA_SOURCE=supabase');
-    if (!env.supabaseKey) erros.push('SUPABASE_KEY e obrigatorio quando DATA_SOURCE=supabase');
+  if (config.dataSource === 'supabase') {
+    if (!config.supabaseUrl) erros.push('SUPABASE_URL e obrigatorio quando DATA_SOURCE=supabase');
+    if (!config.supabaseKey) erros.push('SUPABASE_KEY e obrigatorio quando DATA_SOURCE=supabase');
   }
 
-  if (env.isProduction && !env.jwtSecret) {
-    erros.push('JWT_SECRET e obrigatorio em producao');
+  if (config.isProduction) {
+    if (!config.jwtSecret) {
+      erros.push('JWT_SECRET e obrigatorio em producao');
+    } else if (SEGREDOS_CONHECIDOS.includes(config.jwtSecret)) {
+      erros.push('JWT_SECRET de exemplo nao pode ser usado em producao');
+    } else if (config.jwtSecret.length < SEGREDO_TAMANHO_RECOMENDADO) {
+      console.warn(
+        `[seguranca] JWT_SECRET tem menos de ${SEGREDO_TAMANHO_RECOMENDADO} caracteres; ` +
+          'gere um mais forte (ex.: openssl rand -hex 32)'
+      );
+    }
   }
 
   if (erros.length > 0) {

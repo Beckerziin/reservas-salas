@@ -19,6 +19,13 @@ function errorHandler(err, req, res, _next) {
     });
   }
 
+  // Corpo acima do limite de express.json().
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({
+      erro: { codigo: 'CORPO_MUITO_GRANDE', mensagem: 'Corpo da requisicao excede o limite' },
+    });
+  }
+
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       erro: { codigo: err.codigo, mensagem: err.message },

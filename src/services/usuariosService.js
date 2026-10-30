@@ -2,7 +2,13 @@
 
 const bcrypt = require('bcryptjs');
 const { ValidationError, ConflictError, NotFoundError } = require('../domain/errors');
-const { emailValido, textoPreenchido } = require('../domain/validacoes');
+const {
+  emailValido,
+  textoPreenchido,
+  textoSemMarcacao,
+  senhaDentroDoLimite,
+  SENHA_MAX_BYTES,
+} = require('../domain/validacoes');
 const { sanitizarUsuario } = require('./sanitizar');
 
 const SENHA_MIN = 6;
@@ -22,6 +28,9 @@ function criarUsuariosService({ usuarios }) {
       if (!textoPreenchido(nome)) {
         throw new ValidationError('Nome e obrigatorio', 'NOME_OBRIGATORIO');
       }
+      if (!textoSemMarcacao(nome)) {
+        throw new ValidationError('Nome contem caracteres invalidos', 'NOME_INVALIDO');
+      }
       if (!emailValido(email)) {
         throw new ValidationError('E-mail invalido', 'EMAIL_INVALIDO');
       }
@@ -29,6 +38,12 @@ function criarUsuariosService({ usuarios }) {
         throw new ValidationError(
           `Senha deve ter ao menos ${SENHA_MIN} caracteres`,
           'SENHA_FRACA'
+        );
+      }
+      if (!senhaDentroDoLimite(senha)) {
+        throw new ValidationError(
+          `Senha deve ter no maximo ${SENHA_MAX_BYTES} bytes`,
+          'SENHA_MUITO_LONGA'
         );
       }
 

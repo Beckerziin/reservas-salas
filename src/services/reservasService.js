@@ -7,6 +7,7 @@ const {
   NotFoundError,
 } = require('../domain/errors');
 const rules = require('../domain/reservaRules');
+const { identificadorValido } = require('../domain/validacoes');
 
 /**
  * Service de reservas. RF04-RF07, aplicando RN01-RN05.
@@ -21,6 +22,9 @@ function criarReservasService({ reservas, salas }) {
     async criar({ usuarioId, salaId, inicio, fim }, agora = new Date()) {
       if (!salaId) {
         throw new ValidationError('Sala e obrigatoria', 'SALA_OBRIGATORIA');
+      }
+      if (!identificadorValido(salaId)) {
+        throw new ValidationError('Sala invalida', 'SALA_INVALIDA');
       }
       let dtInicio;
       let dtFim;

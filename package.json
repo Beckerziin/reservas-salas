@@ -13,6 +13,7 @@
     "test:unit": "jest tests/unit --runInBand",
     "test:integration": "jest tests/integration --runInBand",
     "test:system": "jest tests/system --runInBand",
+    "test:security": "jest tests/security --runInBand --verbose",
     "test:e2e": "playwright test",
     "lint": "eslint ."
   },
